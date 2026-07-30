@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crew Quiz</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='5' fill='%23060ce9'/%3E%3Ctext x='16' y='24' font-size='22' font-weight='bold' font-family='Arial' fill='%23f5c518' text-anchor='middle'%3E%3F%3C/text%3E%3C/svg%3E">
+<script src="https://sdk.scdn.co/spotify-player.js"></script>
+<style>
+  :root{
+    --jeo-blue:#060ce9;
+    --jeo-blue-dark:#03086b;
+    --jeo-gold:#d9a441;
+    --jeo-value:#f5c518;
+    --bg:#05060f;
+    --tile-gap:10px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:radial-gradient(circle at 50% -10%,#141a5e 0%,var(--bg) 60%);
+    color:#fff;
+    font-family:"Helvetica Neue",Arial,sans-serif;
+    min-height:100vh;
+    display:flex;flex-direction:column;
+  }
+  button{font-family:inherit;cursor:pointer;border:none}
+
+  /* ---------- top bar ---------- */
+  #topbar{
+    display:flex;align-items:center;gap:12px;
+    padding:10px 18px;background:rgba(0,0,0,.45);
+    border-bottom:1px solid rgba(255,255,255,.08);
+    flex-wrap:wrap;
+  }
+  #topbar .title{
+    font-weight:800;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--jeo-value);font-size:15px;margin-right:auto;
+  }
+  .pill{
+    display:inline-flex;align-items:center;gap:7px;
+    font-size:12px;padding:6px 12px;border-radius:999px;
+    background:rgba(255,255,255,.08);color:#cfd3ff;
+  }
+  .dot{width:8px;height:8px;border-radius:50%;background:#777;flex:none}
+  .dot.ok{background:#1db954;box-shadow:0 0 8px #1db954}
+  .dot.warn{background:#e8b923}
+  .dot.err{background:#e04f4f}
+  .btn{
+    background:rgba(255,255,255,.12);color:#fff;
+    padding:7px 14px;border-radius:8px;font-size:12px;font-weight:600;
+    transition:background .15s;
+  }
+  .btn:hover{background:rgba(255,255,255,.22)}
+  .btn.green{background:#1db954;color:#04220f}
+  .btn.green:hover{background:#25d366}
+
+  /* ---------- scoreboard ---------- */
+  #scoreboard{display:grid;gap:var(--tile-gap);grid-template-columns:repeat(3,1fr)}
+  .team{
+    background:linear-gradient(180deg,rgba(255,255,255,.09),rgba(255,255,255,.03));
+    border:1px solid rgba(255,255,255,.14);border-radius:10px;
+    padding:10px 16px;display:flex;align-items:center;gap:14px;min-height:64px;
+  }
+  .team .tname{
+    font-weight:700;text-transform:uppercase;letter-spacing:.07em;
+    font-size:clamp(11px,1.2vw,15px);color:#cdd3ff;
+    flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .team .tscore{
+    font-size:clamp(22px,2.6vw,36px);font-weight:800;color:var(--jeo-value);
+    font-variant-numeric:tabular-nums;text-shadow:1px 2px 0 rgba(0,0,0,.5);
+  }
+  .team.lead{border-color:var(--jeo-value);background:linear-gradient(180deg,rgba(245,197,24,.20),rgba(245,197,24,.05))}
+  .team.lead .tname{color:#ffe9a8}
+  .team .crown{font-size:15px;filter:saturate(1.3)}
+
+  /* compact score strip inside question view */
+  #mini-score{display:flex;gap:10px;flex-wrap:wrap;margin-left:auto}
+  .mini{
+    display:flex;align-items:center;gap:7px;font-size:12px;
+    background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);
+    border-radius:999px;padding:4px 12px;color:#cdd3ff;
+    text-transform:none;letter-spacing:0;font-weight:600;
+  }
+  .mini b{color:var(--jeo-value);font-variant-numeric:tabular-nums}
+  .mini.lead{border-color:var(--jeo-value)}
+
+  /* team award panel on the answer screen */
+  .awards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;width:min(860px,100%)}
+  .award{
+    background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.16);
+    border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:9px;align-items:center;
+  }
+  .award .an{
+    font-size:clamp(11px,1.15vw,14px);font-weight:700;text-transform:uppercase;
+    letter-spacing:.06em;color:#cdd3ff;text-align:center;
+    max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .award .as{font-size:clamp(19px,2.2vw,30px);font-weight:800;color:var(--jeo-value);font-variant-numeric:tabular-nums}
+  .award .arow{display:flex;gap:8px;width:100%}
+  .award button{
+    flex:1;padding:11px 4px;border-radius:8px;font-weight:800;
+    font-size:clamp(13px,1.3vw,17px);font-variant-numeric:tabular-nums;
+    transition:filter .12s,transform .08s;
+  }
+  .award button:active{transform:translateY(2px)}
+  .award .plus{background:#1db954;color:#04220f}
+  .award .minus{background:rgba(255,255,255,.14);color:#ffbcbc}
+  .award button:hover{filter:brightness(1.15)}
+  .award .kbd{font-size:10px;color:#8b93c9;letter-spacing:.04em}
+  #award-zone{display:none;flex-direction:column;gap:11px;align-items:center}
+  #award-zone.on{display:flex}
+  .awardlog{
+    font-size:13px;color:#b9c0ff;display:flex;align-items:center;gap:12px;
+    justify-content:center;flex-wrap:wrap;min-height:20px;
+  }
+  .awardlog .chip{
+    background:rgba(29,185,84,.18);border:1px solid rgba(29,185,84,.45);
+    border-radius:999px;padding:3px 11px;color:#a9f0c3;font-weight:600;
+  }
+  .awardlog .chip.neg{background:rgba(224,79,79,.18);border-color:rgba(224,79,79,.45);color:#ffb9b9}
+  .undo{
+    background:rgba(255,255,255,.12);color:#fff;border-radius:7px;
+    padding:4px 12px;font-size:12px;font-weight:600;
+  }
+  .undo:hover{background:rgba(255,255,255,.2)}
+
+  /* ---------- board ---------- */
+  #board-view{flex:1;display:flex;flex-direction:column;padding:18px;gap:var(--tile-gap)}
+  #board{
+    flex:1;display:grid;gap:var(--tile-gap);
+    grid-auto-flow:column;
+  }
+  .col{display:grid;gap:var(--tile-gap);grid-template-rows:auto repeat(5,1fr)}
+  .cat{
+    background:linear-gradient(180deg,#0b12a8,var(--jeo-blue-dark));
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:8px;
+    display:flex;align-items:center;justify-content:center;text-align:center;
+    padding:14px 10px;min-height:80px;
+    font-weight:800;text-transform:uppercase;letter-spacing:.06em;
+    font-size:clamp(11px,1.35vw,18px);line-height:1.25;
+    text-shadow:0 2px 4px rgba(0,0,0,.6);
+  }
+  .tile{
+    background:linear-gradient(180deg,var(--jeo-blue),#0409b4);
+    border:1px solid rgba(255,255,255,.10);
+    border-radius:8px;
+    color:var(--jeo-value);
+    font-size:clamp(24px,3.6vw,54px);font-weight:800;
+    text-shadow:2px 3px 0 rgba(0,0,0,.55);
+    display:flex;align-items:center;justify-content:center;
+    transition:transform .12s ease,filter .12s ease;
+    width:100%;height:100%;
+  }
+  .tile:hover:not(.used){transform:scale(1.035);filter:brightness(1.25)}
+  .tile.used{
+    background:#0a0c33;color:transparent;cursor:default;
+    border-color:rgba(255,255,255,.05);
+  }
+  .tile.todo{opacity:.65}
+
+  /* ---------- question / answer view ---------- */
+  #detail-view{
+    flex:1;display:none;flex-direction:column;
+    padding:clamp(18px,4vw,48px);gap:22px;
+  }
+  #detail-view.on{display:flex}
+  .crumb{
+    font-size:13px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--jeo-gold);font-weight:700;
+  }
+  .crumb .val{color:var(--jeo-value)}
+  .stage{
+    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;gap:26px;
+    background:linear-gradient(180deg,var(--jeo-blue),#03086b);
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:14px;
+    padding:clamp(24px,5vw,64px);
+  }
+  .prompt{
+    font-size:clamp(20px,3.1vw,44px);font-weight:700;line-height:1.35;
+    text-shadow:0 3px 8px rgba(0,0,0,.5);max-width:24ch;
+  }
+  .prompt.long{font-size:clamp(17px,2.1vw,30px);max-width:34ch}
+  .sub{font-size:clamp(13px,1.3vw,18px);color:#b9c0ff;max-width:60ch;line-height:1.5}
+  .answer{
+    font-size:clamp(22px,3vw,44px);font-weight:800;color:var(--jeo-value);
+    line-height:1.35;max-width:26ch;text-shadow:0 3px 8px rgba(0,0,0,.5);
+  }
+  .answer.long{font-size:clamp(18px,2.1vw,30px);max-width:36ch}
+  .choices{display:flex;flex-direction:column;gap:12px;width:min(760px,100%)}
+  .choice{
+    background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.14);
+    border-radius:10px;padding:14px 20px;text-align:left;
+    font-size:clamp(14px,1.6vw,22px);line-height:1.35;
+    display:flex;gap:14px;align-items:flex-start;
+  }
+  .choice .letter{color:var(--jeo-gold);font-weight:800;flex:none}
+  .choice.correct{background:rgba(29,185,84,.22);border-color:#1db954}
+  .choice.correct .letter{color:#1db954}
+  .nowplaying{
+    font-size:13px;color:#9fe8b6;display:flex;align-items:center;gap:8px;min-height:18px;
+  }
+  .nowplaying.err{color:#ffb3b3}
+  .eq{display:inline-flex;gap:2px;align-items:flex-end;height:13px}
+  .eq i{width:3px;background:#1db954;animation:eq .9s infinite ease-in-out}
+  .eq i:nth-child(2){animation-delay:.15s}
+  .eq i:nth-child(3){animation-delay:.3s}
+  .eq i:nth-child(4){animation-delay:.45s}
+  @keyframes eq{0%,100%{height:3px}50%{height:13px}}
+
+  .controls{display:flex;gap:14px;flex-wrap:wrap;justify-content:center}
+  .bigbtn{
+    padding:16px 34px;border-radius:10px;
+    font-size:clamp(14px,1.5vw,20px);font-weight:800;
+    text-transform:uppercase;letter-spacing:.08em;
+    background:var(--jeo-gold);color:#1a1200;
+    transition:transform .1s,filter .15s;
+  }
+  .bigbtn:hover{filter:brightness(1.12)}
+  .bigbtn:active{transform:translateY(2px)}
+  .bigbtn.ghost{background:rgba(255,255,255,.14);color:#fff}
+  .bigbtn.playing{background:#1db954;color:#04220f}
+  .bigbtn:disabled{opacity:.4;cursor:not-allowed}
+  .linkout{font-size:13px;color:#9db4ff}
+
+  /* ---------- setup modal ---------- */
+  #modal,#team-modal{
+    position:fixed;inset:0;background:rgba(3,4,20,.82);
+    display:none;align-items:center;justify-content:center;padding:20px;z-index:50;
+  }
+  #modal.on,#team-modal.on{display:flex}
+  #team-modal{z-index:60}
+  .card{
+    background:#101436;border:1px solid rgba(255,255,255,.14);
+    border-radius:14px;padding:28px;width:min(560px,100%);
+    display:flex;flex-direction:column;gap:14px;
+    max-height:88vh;overflow:auto;
+  }
+  .card h2{font-size:19px}
+  .card p,.card li{font-size:13.5px;color:#c3c8f0;line-height:1.55}
+  .card ol{padding-left:20px;display:flex;flex-direction:column;gap:6px}
+  .card code{
+    background:rgba(0,0,0,.45);padding:2px 6px;border-radius:4px;
+    font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;color:#ffd97a;
+  }
+  .card input{
+    width:100%;padding:11px 13px;border-radius:8px;
+    border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.35);
+    color:#fff;font-size:14px;font-family:ui-monospace,Menlo,Consolas,monospace;
+  }
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  .warnbox{
+    background:rgba(232,185,35,.12);border:1px solid rgba(232,185,35,.4);
+    border-radius:8px;padding:11px 13px;font-size:12.5px;color:#ffdf9b;line-height:1.5;
+  }
+  @media (max-width:820px){
+    #board{grid-auto-flow:row;grid-template-columns:1fr}
+    .col{grid-template-rows:none}
+    .tile{min-height:56px}
+  }
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <div class="title">Crew Quiz</div>
+  <div class="pill"><span class="dot" id="sp-dot"></span><span id="sp-status">Spotify: ikke forbundet</span></div>
+  <button class="btn" id="btn-teams">Hold</button>
+  <button class="btn" id="btn-setup">Spotify‑opsætning</button>
+  <button class="btn" id="btn-reset">Nulstil bræt</button>
+</div>
+
+<!-- ============ BOARD ============ -->
+<div id="board-view">
+  <div id="scoreboard"></div>
+  <div id="board"></div>
+</div>
+
+<!-- ============ QUESTION / ANSWER ============ -->
+<div id="detail-view">
+  <div class="crumb" style="display:flex;align-items:center;gap:10px">
+    <span id="d-cat"></span> &nbsp;·&nbsp; <span class="val" id="d-val"></span>
+    <span id="mini-score"></span>
+  </div>
+  <div class="stage" id="stage"></div>
+  <div id="award-zone"></div>
+  <div class="controls" id="controls"></div>
+</div>
+
+<!-- ============ TEAM MODAL ============ -->
+<div id="team-modal">
+  <div class="card">
+    <h2 id="team-modal-title">Hvem spiller med?</h2>
+    <p>Skriv navnene på de tre hold. Du kan altid rette dem undervejs via <em>Hold</em> i toppen.</p>
+    <input id="t0" placeholder="Hold 1" autocomplete="off" maxlength="28">
+    <input id="t1" placeholder="Hold 2" autocomplete="off" maxlength="28">
+    <input id="t2" placeholder="Hold 3" autocomplete="off" maxlength="28">
+    <div class="row">
+      <button class="btn green" id="btn-teams-save">Gem</button>
+      <button class="btn" id="btn-scores-reset">Nulstil point</button>
+      <button class="btn" id="btn-teams-close" style="margin-left:auto">Luk</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SETUP MODAL ============ -->
+<div id="modal">
+  <div class="card">
+    <h2>Spotify‑opsætning</h2>
+    <p>Afspilning i browseren kræver <strong>Spotify Premium</strong> og et gratis udvikler‑app‑ID.</p>
+    <ol>
+      <li>Gå til <code>developer.spotify.com/dashboard</code> og log ind.</li>
+      <li>Klik <em>Create app</em>. Navn/beskrivelse er lige meget.</li>
+      <li>Sæt <em>Redirect URI</em> til præcis: <code id="redir-uri"></code> — klik <em>Add</em>.</li>
+      <li>Under <em>Which API/SDKs are you planning to use</em>: sæt flueben ved <strong>Web API</strong> og <strong>Web Playback SDK</strong>.</li>
+      <li>Gem, åbn appen, og kopiér <em>Client ID</em> ind herunder.</li>
+    </ol>
+    <div class="warnbox" id="origin-warn" style="display:none"></div>
+    <input id="client-id" placeholder="Client ID (32 tegn)" autocomplete="off" spellcheck="false">
+    <div class="row">
+      <button class="btn green" id="btn-connect">Gem &amp; forbind</button>
+      <button class="btn" id="btn-logout">Log ud</button>
+      <button class="btn" id="btn-close" style="margin-left:auto">Luk</button>
+    </div>
+    <p style="font-size:12.5px;opacity:.8">Uden Spotify virker quizzen stadig — “Hint” viser så bare sangtitel og starttidspunkt, så du kan afspille manuelt.</p>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   ==========   SPØRGSMÅL — rediger frit herunder    ==========
+   ============================================================
+   type: "song"   -> Hint afspiller sangen (guess hvem/hvad)
+   type: "choice" -> Hint viser de 3 svarmuligheder
+   type: "lyric"  -> Hint afspiller sangen fra startMs
+
+   track: { q: "søgetekst til Spotify", startMs: 0,
+            uri: "spotify:track:XXXX"  <- valgfrit, låser den præcise sang }
+   Tip: find URI i Spotify-appen: Højreklik sang -> Del -> Kopiér link,
+        og indsæt her som spotify:track:<id fra linket>
+============================================================ */
+const CATEGORIES = [
+  {
+    name: "Crew who whooo yeah yeah",
+    blurb: "Der afspilles et stykke musik — gæt personen.",
+    questions: [
+      { value:100, type:"song",
+        prompt:"Hvem fra Crew er dette?",
+        answer:"Jeppe",
+        track:{ q:"Vil du noget Guldimund Saveus", startMs:0 },
+        trackLabel:"“Vil du noget?” — Guldimund / Saveus" },
+
+      { value:200, type:"song",
+        prompt:"Hvem fra Crew er dette?",
+        answer:"Alex",
+        track:{ q:"Æ fra Jylland L:Ron:Harald", startMs:0 },
+        trackLabel:"“Æ’ fra Jylland” — L:Ron:Harald" },
+
+      { value:300, type:"song",
+        prompt:"Hvem fra Crew er dette?",
+        answer:"Valthor / Haukur",
+        track:{ q:"Immigrant Song Led Zeppelin", startMs:0 },
+        trackLabel:"“Immigrant Song” — Led Zeppelin" },
+
+      { value:400, type:"song",
+        prompt:"Hvem fra Crew er dette?",
+        answer:"Rasmus",
+        track:{ q:"Weak AJR", startMs:0 },
+        trackLabel:"“Weak” — AJR" },
+
+      { value:500, type:"song",
+        prompt:"Hvem fra Crew er dette?",
+        answer:"Mikkel",
+        track:{ q:"KBHAVANA Sivas", startMs:0 },
+        trackLabel:"“KBHAVANA” — Sivas" }
+    ]
+  },
+  {
+    name: "Random Ass Stuff",
+    blurb: "Spørgsmål med 3 svarmuligheder.",
+    questions: [
+      { value:100, type:"choice",
+        prompt:"Freddie Mercury havde haft mindst én sang på Michael Jacksons Thriller‑album, hvis ikke for hvad?",
+        choices:["MJ’s lama","Mercurys stofmisbrug","MJ ville ikke lave musik med en homoseksuel"],
+        correct:0 },
+
+      { value:200, type:"choice",
+        prompt:"Damon Albarn (Blur, Gorillaz) skrev “Clint Eastwood” i 2001 — men har senere fortalt at han ikke selv komponerede den. Hvad brugte han?",
+        choices:["AI","Et indbygget standard‑beat (preset) på et Omnichord‑instrument","En lydfil der fulgte med som gratis demo på en ny Apple Mac"],
+        correct:1,
+        link:"https://www.youtube.com/shorts/kn8ocOsdbEo" },
+
+      { value:300, type:"choice",
+        prompt:"I 1968 ville The Beatles filmatisere Ringenes Herre med Paul McCartney som Frodo og John Lennon som Gollum. Hvorfor blev det aldrig til noget?",
+        choices:["J.R.R. Tolkien nægtede personligt at sælge filmrettighederne til dem","George Harrison nægtede at spille “spidsøret” elver","Pladeselskabet mente det ville ruinere deres image som popstjerner"],
+        correct:0 },
+
+      { value:400, type:"choice",
+        prompt:"Hvilken berømt musiker har aldrig lært at læse noder på traditionel vis, men skrev alligevel nogle af det 20. århundredes mest berømte kompositioner?",
+        choices:["Paul McCartney","Keith Richards","Kurt Cobain"],
+        correct:0 },
+
+      { value:500, type:"choice",
+        prompt:"Hvilken kendt musiker blev tilbudt rollen som Gandalf i Peter Jacksons Lord of the Rings‑film, men takkede nej?",
+        choices:["Dave Grohl","David Bowie","Ozzy Osbourne"],
+        correct:1 }
+    ]
+  },
+  {
+    name: "HVABEHAR?",
+    blurb: "Gæt de skjulte ord. Sangen afspilles fra et bestemt tidspunkt.",
+    questions: [
+      { value:100, type:"lyric",
+        prompt:"___, oh yeah, ___, ___",
+        answer:"your skin, oh yeah, your skin, and bones",
+        track:{ q:"Yellow Coldplay", startMs:87000 },
+        trackLabel:"Coldplay — “Yellow” (1:27)" },
+
+      { value:200, type:"lyric",
+        prompt:"Got a ___, they’ll tell you I’m insane",
+        answer:"Got a long list of ex‑lovers, they’ll tell you I’m insane",
+        track:{ q:"Blank Space Taylor Swift", startMs:52000 },
+        trackLabel:"Taylor Swift — “Blank Space” (0:52)" },
+
+      { value:300, type:"lyric",
+        prompt:"I ___ to get the feelin’ right",
+        answer:"I wore cologne to get the feelin’ right",
+        track:{ q:"What's My Age Again blink-182", startMs:14000 },
+        trackLabel:"blink‑182 — “What’s My Age Again?” (0:14)" },
+
+      { value:400, type:"lyric",
+        prompt:"Lad mig leve, lad mig leve, lad mig leve, ___",
+        answer:"Lad mig leve, lad mig leve, lad mig leve, han bad dig",
+        track:{ q:"Livsforladt Anika", startMs:59000 },
+        trackLabel:"Anika — “Livsforladt” (0:59)" },
+
+      { value:500, type:"lyric",
+        prompt:"Is it worth it? Let me work it, I put my thing down, flip it and reverse it, ___",
+        answer:"Is it worth it? Let me work it, I put my thing down, flip it and reverse it, ti esrever dna ti pilf ,nwod gniht ym tuP",
+        track:{ q:"Work It Missy Elliott", startMs:29000 },
+        trackLabel:"Missy Elliott — “Work It” (0:29)" }
+    ]
+  }
+];
+/* ==========  SLUT PÅ SPØRGSMÅL  ========== */
+
+
+/* ============================================================
+   Spotify: PKCE auth + Web Playback SDK
+============================================================ */
+const SCOPES = "streaming user-read-email user-read-private user-modify-playback-state user-read-playback-state";
+const LS = {
+  cid:"cq_client_id", verifier:"cq_verifier", tok:"cq_token",
+  exp:"cq_expires", ref:"cq_refresh", used:"cq_used", cache:"cq_trackcache",
+  teams:"cq_teams", log:"cq_awardlog"
+};
+const redirectUri = location.origin + location.pathname;
+
+const sp = {
+  player:null, deviceId:null, ready:false, sdkLoaded:false,
+  trackCache: JSON.parse(localStorage.getItem(LS.cache) || "{}")
+};
+
+const $ = s => document.querySelector(s);
+const store = { get:k=>localStorage.getItem(k), set:(k,v)=>localStorage.setItem(k,v), del:k=>localStorage.removeItem(k) };
+
+function setStatus(text, cls){
+  $("#sp-status").textContent = "Spotify: " + text;
+  $("#sp-dot").className = "dot" + (cls ? " " + cls : "");
+}
+
+/* ---- PKCE helpers ---- */
+function randomString(n){
+  const chars="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
+  const a=new Uint8Array(n); crypto.getRandomValues(a);
+  return Array.from(a,x=>chars[x%chars.length]).join("");
+}
+async function challengeFrom(verifier){
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier));
+  return btoa(String.fromCharCode(...new Uint8Array(digest)))
+    .replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+}
+
+async function beginLogin(){
+  const cid = (store.get(LS.cid)||"").trim();
+  if(!cid){ alert("Indsæt først dit Spotify Client ID."); return; }
+  if(location.protocol === "file:"){
+    alert("Spotify-login virker ikke når filen åbnes direkte (file://).\n\nStart start.bat (eller kør: python -m http.server 8080 --bind 127.0.0.1) og åbn http://127.0.0.1:8080/");
+    return;
+  }
+  const verifier = randomString(64);
+  store.set(LS.verifier, verifier);
+  const params = new URLSearchParams({
+    client_id: cid,
+    response_type: "code",
+    redirect_uri: redirectUri,
+    code_challenge_method: "S256",
+    code_challenge: await challengeFrom(verifier),
+    scope: SCOPES,
+    state: randomString(12)
+  });
+  location.href = "https://accounts.spotify.com/authorize?" + params;
+}
+
+async function exchangeCode(code){
+  const cid = store.get(LS.cid);
+  const body = new URLSearchParams({
+    grant_type:"authorization_code", code, redirect_uri:redirectUri,
+    client_id:cid, code_verifier: store.get(LS.verifier) || ""
+  });
+  const r = await fetch("https://accounts.spotify.com/api/token",{
+    method:"POST", headers:{"Content-Type":"application/x-www-form-urlencoded"}, body
+  });
+  const d = await r.json();
+  if(d.access_token) saveToken(d);
+  else setStatus("login mislykkedes ("+(d.error_description||d.error||"ukendt")+")","err");
+  store.del(LS.verifier);
+}
+
+function saveToken(d){
+  store.set(LS.tok, d.access_token);
+  store.set(LS.exp, String(Date.now() + (d.expires_in-60)*1000));
+  if(d.refresh_token) store.set(LS.ref, d.refresh_token);
+}
+
+async function refreshToken(){
+  const rt = store.get(LS.ref), cid = store.get(LS.cid);
+  if(!rt || !cid) return null;
+  const r = await fetch("https://accounts.spotify.com/api/token",{
+    method:"POST", headers:{"Content-Type":"application/x-www-form-urlencoded"},
+    body:new URLSearchParams({grant_type:"refresh_token", refresh_token:rt, client_id:cid})
+  });
+  const d = await r.json();
+  if(d.access_token){ saveToken(d); return d.access_token; }
+  return null;
+}
+
+async function getToken(){
+  const tok = store.get(LS.tok), exp = +(store.get(LS.exp)||0);
+  if(tok && Date.now() < exp) return tok;
+  return await refreshToken();
+}
+
+/* ---- Web Playback SDK ---- */
+window.onSpotifyWebPlaybackSDKReady = () => { sp.sdkLoaded = true; maybeInitPlayer(); };
+
+async function maybeInitPlayer(){
+  if(!sp.sdkLoaded || sp.player) return;
+  const tok = await getToken();
+  if(!tok){ setStatus("ikke forbundet"); return; }
+  setStatus("forbinder…","warn");
+  sp.player = new Spotify.Player({
+    name: "Crew Quiz",
+    getOAuthToken: async cb => cb(await getToken()),
+    volume: 0.8
+  });
+  sp.player.addListener("ready", ({device_id}) => {
+    sp.deviceId = device_id; sp.ready = true;
+    setStatus("klar","ok");
+  });
+  sp.player.addListener("not_ready", () => { sp.ready=false; setStatus("afbrudt","warn"); });
+  sp.player.addListener("initialization_error", e => setStatus("browser understøttes ikke","err"));
+  sp.player.addListener("authentication_error", e => { sp.ready=false; setStatus("login udløbet — log ind igen","err"); });
+  sp.player.addListener("account_error", e => setStatus("kræver Spotify Premium","err"));
+  sp.player.connect();
+}
+
+async function api(path, opts={}){
+  const tok = await getToken();
+  if(!tok) throw new Error("Ikke logget ind på Spotify");
+  const r = await fetch("https://api.spotify.com/v1"+path, {
+    ...opts, headers:{ Authorization:"Bearer "+tok, "Content-Type":"application/json", ...(opts.headers||{}) }
+  });
+  if(r.status === 204) return null;
+  const txt = await r.text();
+  const data = txt ? JSON.parse(txt) : null;
+  if(!r.ok) throw new Error(data?.error?.message || ("Spotify-fejl "+r.status));
+  return data;
+}
+
+async function resolveTrack(track){
+  if(track.uri) return { uri:track.uri, label:null };
+  const key = track.q.toLowerCase();
+  if(sp.trackCache[key]) return sp.trackCache[key];
+  const d = await api("/search?q="+encodeURIComponent(track.q)+"&type=track&limit=1");
+  const t = d?.tracks?.items?.[0];
+  if(!t) throw new Error("Fandt ikke sangen på Spotify: "+track.q);
+  const res = { uri:t.uri, label: t.name+" — "+t.artists.map(a=>a.name).join(", ") };
+  sp.trackCache[key] = res;
+  localStorage.setItem(LS.cache, JSON.stringify(sp.trackCache));
+  return res;
+}
+
+async function playTrack(track){
+  if(!sp.ready || !sp.deviceId) throw new Error("Spotify-afspilleren er ikke klar");
+  const t = await resolveTrack(track);
+  await api("/me/player/play?device_id="+sp.deviceId, {
+    method:"PUT",
+    body: JSON.stringify({ uris:[t.uri], position_ms: track.startMs||0 })
+  });
+  return t;
+}
+async function stopTrack(){ try{ await sp.player?.pause(); }catch(e){} }
+
+
+/* ============================================================
+   Hold og point
+============================================================ */
+let teams = JSON.parse(localStorage.getItem(LS.teams) || "null");   // [{name,score}] eller null
+let awardLog = JSON.parse(localStorage.getItem(LS.log) || "[]");    // [{t,d,qk}] nyeste sidst
+
+function saveTeams(){ localStorage.setItem(LS.teams, JSON.stringify(teams)); }
+function saveLog(){ localStorage.setItem(LS.log, JSON.stringify(awardLog)); }
+
+function leaders(){
+  if(!teams) return [];
+  const max = Math.max(...teams.map(t=>t.score));
+  return max > 0 ? teams.map((t,i)=> t.score===max ? i : -1).filter(i=>i>=0) : [];
+}
+
+function renderScoreboard(){
+  const sb = $("#scoreboard");
+  if(!teams){ sb.innerHTML = ""; sb.style.display = "none"; return; }
+  sb.style.display = "grid";
+  const lead = leaders();
+  sb.innerHTML = "";
+  teams.forEach((t,i)=>{
+    const d = el("div","team" + (lead.includes(i)?" lead":""));
+    const n = el("span","tname", t.name);
+    d.appendChild(n);
+    if(lead.includes(i)) d.appendChild(el("span","crown","👑"));
+    d.appendChild(el("span","tscore", String(t.score)));
+    d.title = "Klik for at omdøbe";
+    d.addEventListener("click", openTeamModal);
+    sb.appendChild(d);
+  });
+}
+
+function renderMiniScore(){
+  const m = $("#mini-score");
+  if(!teams){ m.innerHTML = ""; return; }
+  const lead = leaders();
+  m.innerHTML = "";
+  teams.forEach((t,i)=>{
+    const s = el("span","mini" + (lead.includes(i)?" lead":""));
+    s.appendChild(el("span",null,t.name));
+    const b = document.createElement("b"); b.textContent = t.score;
+    s.appendChild(b);
+    m.appendChild(s);
+  });
+}
+
+function award(teamIdx, delta){
+  teams[teamIdx].score += delta;
+  awardLog.push({ t:teamIdx, d:delta, qk: current ? keyOf(current.ci,current.qi) : null });
+  saveTeams(); saveLog();
+  renderMiniScore();
+  if(current) renderAwardPanel();
+}
+
+function undoLast(){
+  const last = awardLog.pop();
+  if(!last) return;
+  teams[last.t].score -= last.d;
+  saveTeams(); saveLog();
+  renderMiniScore();
+  if(current) renderAwardPanel();
+}
+
+/* ---- team modal ---- */
+function openTeamModal(){
+  const names = teams ? teams.map(t=>t.name) : ["","",""];
+  [0,1,2].forEach(i => $("#t"+i).value = names[i] || "");
+  $("#team-modal-title").textContent = teams ? "Rediger hold" : "Hvem spiller med?";
+  $("#btn-teams-close").style.display = teams ? "" : "none";
+  $("#btn-scores-reset").style.display = teams ? "" : "none";
+  $("#btn-teams-save").textContent = teams ? "Gem" : "Start spil";
+  $("#team-modal").classList.add("on");
+  $("#t0").focus();
+}
+
+function saveTeamModal(){
+  const names = [0,1,2].map(i => ($("#t"+i).value || "").trim() || ("Hold "+(i+1)));
+  if(!teams) teams = names.map(n=>({name:n, score:0}));
+  else names.forEach((n,i)=> teams[i].name = n);
+  saveTeams();
+  $("#team-modal").classList.remove("on");
+  renderScoreboard(); renderMiniScore();
+}
+
+
+/* ============================================================
+   Board / views
+============================================================ */
+let used = new Set(JSON.parse(localStorage.getItem(LS.used) || "[]"));
+let current = null;          // {cat, q}
+let playing = false;
+
+const keyOf = (ci,qi) => ci+"-"+qi;
+
+function renderBoard(){
+  const board = $("#board");
+  board.innerHTML = "";
+  board.style.gridTemplateColumns = `repeat(${CATEGORIES.length},1fr)`;
+  CATEGORIES.forEach((cat,ci)=>{
+    const col = document.createElement("div");
+    col.className = "col";
+    const h = document.createElement("div");
+    h.className = "cat"; h.textContent = cat.name;
+    col.appendChild(h);
+    cat.questions.forEach((q,qi)=>{
+      const k = keyOf(ci,qi);
+      const isUsed = used.has(k);
+      const b = document.createElement("button");
+      b.className = "tile" + (isUsed?" used":"") + (q.todo?" todo":"");
+      b.textContent = q.value;
+      b.title = isUsed ? "Højreklik for at gøre feltet aktivt igen" : "";
+      b.addEventListener("click", ()=>openQuestion(ci,qi));
+      // højreklik = fortryd fejlklik: gør feltet tilgængeligt igen
+      b.addEventListener("contextmenu", e=>{
+        e.preventDefault();
+        if(!used.has(k)) return;
+        used.delete(k);
+        localStorage.setItem(LS.used, JSON.stringify([...used]));
+        renderBoard();
+      });
+      col.appendChild(b);
+    });
+    board.appendChild(col);
+  });
+}
+
+function showBoard(){
+  stopTrack(); playing = false; current = null;
+  $("#detail-view").classList.remove("on");
+  $("#award-zone").classList.remove("on");
+  $("#award-zone").innerHTML = "";
+  $("#board-view").style.display = "flex";
+  renderBoard();
+  renderScoreboard();
+}
+
+function openQuestion(ci,qi){
+  const cat = CATEGORIES[ci], q = cat.questions[qi];
+  current = { ci, qi, cat, q };
+  used.add(keyOf(ci,qi));
+  localStorage.setItem(LS.used, JSON.stringify([...used]));
+  $("#board-view").style.display = "none";
+  $("#detail-view").classList.add("on");
+  $("#d-cat").textContent = cat.name;
+  $("#d-val").textContent = q.value;
+  renderMiniScore();
+  renderQuestion();
+}
+
+function el(tag, cls, text){
+  const e = document.createElement(tag);
+  if(cls) e.className = cls;
+  if(text != null) e.textContent = text;
+  return e;
+}
+
+function renderQuestion(revealChoices=false){
+  const {q} = current;
+  const stage = $("#stage"), controls = $("#controls");
+  stage.innerHTML = ""; controls.innerHTML = "";
+  $("#award-zone").classList.remove("on");
+  $("#award-zone").innerHTML = "";
+  playing = false;
+
+  const p = el("div","prompt" + (q.prompt.length>60?" long":""), q.prompt);
+  p.style.whiteSpace = "pre-line";
+  stage.appendChild(p);
+
+  if(q.type === "choice"){
+    const wrap = el("div","choices");
+    wrap.style.visibility = revealChoices ? "visible" : "hidden";
+    q.choices.forEach((c,i)=>{
+      const row = el("div","choice");
+      row.appendChild(el("span","letter","ABC"[i]));
+      row.appendChild(el("span",null,c));
+      wrap.appendChild(row);
+    });
+    stage.appendChild(wrap);
+    if(!revealChoices) stage.appendChild(el("div","sub","Tryk “Hint” for at vise svarmulighederne."));
+  } else if(q.track){
+    stage.appendChild(el("div","sub", sp.ready ? "Tryk “Hint” for at afspille klippet." : q.trackLabel || ""));
+    const np = el("div","nowplaying"); np.id = "np";
+    stage.appendChild(np);
+  } else if(q.trackLabel){
+    stage.appendChild(el("div","sub", q.trackLabel));
+  }
+
+  // Hint button
+  const hint = el("button","bigbtn ghost","Hint");
+  hint.id = "btn-hint";
+  if(q.type === "choice"){
+    hint.disabled = revealChoices;
+    hint.addEventListener("click", ()=>renderQuestion(true));
+  } else if(q.track){
+    hint.addEventListener("click", toggleHintAudio);
+  } else {
+    hint.disabled = true;
+  }
+  controls.appendChild(hint);
+
+  const show = el("button","bigbtn","Vis svar");
+  show.addEventListener("click", renderAnswer);
+  controls.appendChild(show);
+
+  const back = el("button","bigbtn ghost","Tilbage");
+  back.addEventListener("click", showBoard);
+  controls.appendChild(back);
+}
+
+async function toggleHintAudio(){
+  const {q} = current;
+  const btn = $("#btn-hint"), np = $("#np");
+  if(playing){
+    await stopTrack(); playing = false;
+    btn.classList.remove("playing"); btn.textContent = "Hint";
+    if(np) np.innerHTML = "";
+    return;
+  }
+  if(!sp.ready){
+    if(np){
+      np.className = "nowplaying err";
+      np.textContent = "Spotify er ikke klar — afspil manuelt: " + (q.trackLabel || q.track.q);
+    }
+    return;
+  }
+  btn.disabled = true;
+  if(np){ np.className = "nowplaying"; np.textContent = "Henter…"; }
+  try{
+    const t = await playTrack(q.track);
+    playing = true;
+    btn.classList.add("playing"); btn.textContent = "Stop";
+    if(np) np.innerHTML = '<span class="eq"><i></i><i></i><i></i><i></i></span>' +
+      (t.label ? " " + t.label : " Afspiller");
+  }catch(e){
+    if(np){ np.className = "nowplaying err"; np.textContent = e.message + " — afspil manuelt: " + (q.trackLabel||q.track.q); }
+  }finally{ btn.disabled = false; }
+}
+
+/* ---- point-panel på svarskærmen ---- */
+function renderAwardPanel(){
+  const zone = $("#award-zone");
+  if(!current || !teams){ zone.classList.remove("on"); zone.innerHTML = ""; return; }
+  const val = current.q.value, qk = keyOf(current.ci, current.qi);
+  zone.classList.add("on");
+  zone.innerHTML = "";
+
+  const grid = el("div","awards");
+  teams.forEach((t,i)=>{
+    const card = el("div","award");
+    card.appendChild(el("div","an", t.name));
+    card.appendChild(el("div","as", String(t.score)));
+    const row = el("div","arow");
+    const minus = el("button","minus","−"+val);
+    minus.title = t.name + ": træk " + val + " fra";
+    minus.addEventListener("click", ()=>award(i,-val));
+    const plus = el("button","plus","+"+val);
+    plus.title = t.name + ": giv " + val + " point";
+    plus.addEventListener("click", ()=>award(i,val));
+    row.appendChild(minus); row.appendChild(plus);
+    card.appendChild(row);
+    card.appendChild(el("div","kbd","Tast "+(i+1)+"  ·  Shift+"+(i+1)+" for minus"));
+    grid.appendChild(card);
+  });
+  zone.appendChild(grid);
+
+  const logRow = el("div","awardlog");
+  const here = awardLog.filter(a => a.qk === qk);
+  if(here.length){
+    here.forEach(a=>{
+      const c = el("span","chip" + (a.d<0?" neg":""),
+        teams[a.t].name + " " + (a.d>0?"+":"") + a.d);
+      logRow.appendChild(c);
+    });
+  } else {
+    logRow.appendChild(el("span",null,"Ingen point givet for dette spørgsmål endnu."));
+  }
+  if(awardLog.length){
+    const u = el("button","undo","↩ Fortryd sidste");
+    u.addEventListener("click", undoLast);
+    logRow.appendChild(u);
+  }
+  zone.appendChild(logRow);
+}
+
+function renderAnswer(){
+  const {q} = current;
+  const stage = $("#stage"), controls = $("#controls");
+  stage.innerHTML = ""; controls.innerHTML = "";
+  renderAwardPanel();
+
+  stage.appendChild(el("div","sub", q.prompt.replace(/\n/g," ")));
+
+  if(q.type === "choice"){
+    const wrap = el("div","choices");
+    q.choices.forEach((c,i)=>{
+      const row = el("div","choice" + (i===q.correct?" correct":""));
+      row.appendChild(el("span","letter", i===q.correct ? "ABC"[i]+" ✓" : "ABC"[i]));
+      row.appendChild(el("span",null,c));
+      wrap.appendChild(row);
+    });
+    stage.appendChild(wrap);
+    if(q.link){
+      const a = el("a","linkout","Kilde / video →");
+      a.href = q.link; a.target = "_blank"; a.rel = "noopener";
+      stage.appendChild(a);
+    }
+  } else {
+    stage.appendChild(el("div","answer" + (q.answer.length>40?" long":""), q.answer));
+    if(q.trackLabel) stage.appendChild(el("div","sub", q.trackLabel));
+  }
+
+  // keep audio controllable from the answer screen too
+  if(q.track){
+    const stopBtn = el("button","bigbtn ghost", playing ? "Stop musik" : "Afspil igen");
+    stopBtn.addEventListener("click", async ()=>{
+      if(playing){ await stopTrack(); playing=false; stopBtn.textContent="Afspil igen"; }
+      else { try{ await playTrack(q.track); playing=true; stopBtn.textContent="Stop musik"; }catch(e){} }
+    });
+    controls.appendChild(stopBtn);
+  }
+
+  const backQ = el("button","bigbtn ghost","Tilbage til spørgsmål");
+  backQ.addEventListener("click", ()=>renderQuestion(q.type==="choice"));
+  controls.appendChild(backQ);
+
+  const back = el("button","bigbtn","Tilbage til brættet");
+  back.addEventListener("click", showBoard);
+  controls.appendChild(back);
+}
+
+/* ---- keyboard ----
+   Esc      = tilbage til brættet
+   1/2/3    = giv feltets point til hold 1/2/3   (kun på svarskærmen)
+   Shift+1/2/3 = træk point fra
+   Z        = fortryd sidste pointtildeling
+------------------------------------------------ */
+document.addEventListener("keydown", e=>{
+  const modalOpen = $("#modal").classList.contains("on") || $("#team-modal").classList.contains("on");
+  if(modalOpen) return;
+  if(e.key === "Escape" && current){ showBoard(); return; }
+
+  const onAnswer = $("#award-zone").classList.contains("on");
+  if(!onAnswer || !current || !teams) return;
+
+  if(e.key.toLowerCase() === "z"){ e.preventDefault(); undoLast(); return; }
+
+  // "1"/"2"/"3" og Shift-varianterne "!"/"\""/"#" (dansk) / "@"/"#" (US)
+  const plain = { "1":0, "2":1, "3":2 };
+  const shifted = { "!":0, "\"":1, "@":1, "#":2, "£":2 };
+  let idx = null, sign = 1;
+  if(plain[e.key] !== undefined){ idx = plain[e.key]; sign = e.shiftKey ? -1 : 1; }
+  else if(shifted[e.key] !== undefined){ idx = shifted[e.key]; sign = -1; }
+  if(idx === null) return;
+  e.preventDefault();
+  award(idx, sign * current.q.value);
+});
+
+/* ============================================================
+   Setup modal + boot
+============================================================ */
+$("#redir-uri").textContent = redirectUri;
+$("#btn-setup").addEventListener("click", ()=>{
+  $("#client-id").value = store.get(LS.cid) || "";
+  $("#modal").classList.add("on");
+});
+$("#btn-close").addEventListener("click", ()=>$("#modal").classList.remove("on"));
+$("#btn-connect").addEventListener("click", ()=>{
+  store.set(LS.cid, $("#client-id").value.trim());
+  beginLogin();
+});
+$("#btn-logout").addEventListener("click", ()=>{
+  [LS.tok,LS.exp,LS.ref].forEach(store.del);
+  try{ sp.player?.disconnect(); }catch(e){}
+  sp.player=null; sp.ready=false; sp.deviceId=null;
+  setStatus("logget ud");
+});
+$("#btn-reset").addEventListener("click", ()=>{
+  used.clear(); localStorage.setItem(LS.used,"[]"); renderBoard();
+});
+
+/* ---- hold ---- */
+$("#btn-teams").addEventListener("click", openTeamModal);
+$("#btn-teams-save").addEventListener("click", saveTeamModal);
+$("#btn-teams-close").addEventListener("click", ()=>{
+  if(teams) $("#team-modal").classList.remove("on");
+});
+$("#btn-scores-reset").addEventListener("click", ()=>{
+  if(!teams) return;
+  teams.forEach(t=>t.score = 0);
+  awardLog = [];
+  saveTeams(); saveLog();
+  renderScoreboard(); renderMiniScore();
+  if(current) renderAwardPanel();
+});
+[0,1,2].forEach(i => $("#t"+i).addEventListener("keydown", e=>{
+  if(e.key === "Enter"){ e.preventDefault(); if(i<2) $("#t"+(i+1)).focus(); else saveTeamModal(); }
+}));
+
+if(location.protocol === "file:"){
+  const w = $("#origin-warn");
+  w.style.display = "block";
+  w.innerHTML = "Siden er åbnet som en lokal fil (<code>file://</code>). Spotify tillader ikke login herfra — " +
+    "start <code>start.bat</code> og åbn <code>http://127.0.0.1:8080/</code> i stedet.";
+}
+
+(async function boot(){
+  const params = new URLSearchParams(location.search);
+  if(params.get("code")){
+    await exchangeCode(params.get("code"));
+    history.replaceState({}, "", redirectUri);
+  } else if(params.get("error")){
+    setStatus("login afvist","err");
+    history.replaceState({}, "", redirectUri);
+  }
+  renderBoard();
+  renderScoreboard();
+  if(!teams) openTeamModal();          // første gang: spørg om holdnavne
+  if(store.get(LS.tok) || store.get(LS.ref)) maybeInitPlayer();
+  else setStatus("ikke forbundet");
+})();
+</script>
+</body>
+</html>
